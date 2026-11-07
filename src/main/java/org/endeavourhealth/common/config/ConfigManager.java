@@ -116,6 +116,14 @@ public class ConfigManager {
         return getConfiguration(configId, _appId);
     }
 
+    public static <T> T getConfiguration(String configId, Class<T> valueType) throws IOException {
+        String json = ConfigManager.getConfiguration(configId);
+        if (!StringUtils.isEmpty(json)) {
+            return ObjectMapperPool.getInstance().readValue(json, valueType);
+        } else {
+            return null;
+        }
+    }
 
     public synchronized static String getConfiguration(String configId, String appIdParam) {
 
@@ -194,6 +202,17 @@ public class ConfigManager {
     }
 
     public static void setConfiguration(String configId, String data) throws Exception {
+
+        //changed to detect failure and try again with the "global" config app ID
+        if (!_dataAccessLayer.setConfiguration(configId, _appId, data, false)) {
+            if (!_dataAccessLayer.setConfiguration(configId, APP_GLOBAL, data, false)) {
+                throw new Exception("Failed to update config record for config " + configId + " and app " + _appId + " or " + APP_GLOBAL);
+            }
+        }
+    }
+
+    public static void setConfiguration(String configId, Object object) throws Exception {
+        String data = ObjectMapperPool.getInstance().writeValueAsString(object);
 
         //changed to detect failure and try again with the "global" config app ID
         if (!_dataAccessLayer.setConfiguration(configId, _appId, data, false)) {
